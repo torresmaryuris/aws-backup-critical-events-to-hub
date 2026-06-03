@@ -1,3 +1,27 @@
+## Contexto del proyecto
+
+Este repositorio contiene una versión sanitizada y reconstruida de un artefacto de operaciones cloud desarrollado originalmente en un entorno empresarial.
+La información sensible, identificadores internos, URLs productivas, account IDs, credenciales, nombres de clientes y detalles específicos de la empresa fueron eliminados o reemplazados por placeholders seguros.
+El historial de commits comienza desde la versión pública sanitizada y no representa la línea de tiempo original de desarrollo interno.
+
+
+## Projektkontext
+
+Dieses Repository enthält eine bereinigte und rekonstruierte öffentliche Referenzversion eines Cloud-Operations-Artefakts, das ursprünglich in einem Enterprise-Umfeld entwickelt wurde.
+Sensible Informationen, interne Identifikatoren, produktive URLs, AWS Account IDs, Zugangsdaten, Kundennamen und unternehmensspezifische Details wurden entfernt oder durch sichere Platzhalter ersetzt.
+Die Commit-Historie beginnt mit dieser öffentlichen, bereinigten Version und spiegelt nicht die ursprüngliche interne Entwicklungshistorie wider.
+
+## Project Context
+
+This repository contains a sanitized and reconstructed version of a cloud operations artifact originally developed in an enterprise environment.
+Sensitive information, internal identifiers, production URLs, account IDs, credentials, customer names and company-specific details were removed or replaced with safe placeholders.
+The commit history starts from the public sanitized version and does not represent the original internal development timeline.
+
+
+###############################################################################
+
+
+
 # AWS Backup Critical Events to Hub
 
 ---
