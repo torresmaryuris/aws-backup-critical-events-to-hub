@@ -1,0 +1,20 @@
+{
+  "version": "0",
+  "id": "example-event-id-failed",
+  "detail-type": "Backup Job State Change",
+  "source": "aws.backup",
+  "account": "123456789012",
+  "time": "2026-01-01T12:00:00Z",
+  "region": "eu-central-1",
+  "resources": [],
+  "detail": {
+    "backupJobId": "example-backup-job-id-failed",
+    "backupVaultName": "example-backup-vault",
+    "resourceArn": "arn:aws:ec2:eu-central-1:123456789012:volume/vol-example",
+    "resourceType": "EBS",
+    "state": "FAILED",
+    "statusMessage": "Example failure message. Replace with real AWS Backup status message only in runtime logs.",
+    "creationDate": "2026-01-01T11:00:00Z",
+    "completionDate": "2026-01-01T12:00:00Z"
+  }
+}
