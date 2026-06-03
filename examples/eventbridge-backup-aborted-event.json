@@ -1,0 +1,20 @@
+{
+  "version": "0",
+  "id": "example-event-id-aborted",
+  "detail-type": "Backup Job State Change",
+  "source": "aws.backup",
+  "account": "123456789012",
+  "time": "2026-01-01T13:00:00Z",
+  "region": "eu-central-1",
+  "resources": [],
+  "detail": {
+    "backupJobId": "example-backup-job-id-aborted",
+    "backupVaultName": "example-backup-vault",
+    "resourceArn": "arn:aws:rds:eu-central-1:123456789012:db:example-database",
+    "resourceType": "RDS",
+    "state": "ABORTED",
+    "statusMessage": "Example aborted backup job message.",
+    "creationDate": "2026-01-01T12:00:00Z",
+    "completionDate": "2026-01-01T13:00:00Z"
+  }
+}
