@@ -1,0 +1,217 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Description: >
+  AWS Backup Critical Events to Hub.
+  Captures critical AWS Backup events using EventBridge, processes them with Lambda,
+  and forwards normalized messages to a central event hub.
+
+Parameters:
+  ProjectName:
+    Type: String
+    Default: aws-backup-critical-events-to-hub
+    Description: Project name used for resource naming.
+
+  Environment:
+    Type: String
+    Default: demo
+    AllowedValues:
+      - demo
+      - dev
+      - qa
+      - prod
+    Description: Deployment environment.
+
+  HubEndpointUrl:
+    Type: String
+    Description: External hub endpoint URL. Use a placeholder or secure value during deployment.
+    NoEcho: true
+
+  HubAuthToken:
+    Type: String
+    Description: Authentication token for the external hub.
+    NoEcho: true
+
+  LogRetentionInDays:
+    Type: Number
+    Default: 30
+    AllowedValues:
+      - 7
+      - 14
+      - 30
+      - 60
+      - 90
+      - 180
+      - 365
+    Description: CloudWatch Logs retention period.
+
+Resources:
+  BackupCriticalEventsLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub "/aws/lambda/${ProjectName}-${Environment}"
+      RetentionInDays: !Ref LogRetentionInDays
+
+  BackupCriticalEventsLambdaRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: !Sub "${ProjectName}-${Environment}-lambda-role"
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service:
+                - lambda.amazonaws.com
+            Action:
+              - sts:AssumeRole
+      Policies:
+        - PolicyName: !Sub "${ProjectName}-${Environment}-lambda-policy"
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Sid: AllowLambdaLogging
+                Effect: Allow
+                Action:
+                  - logs:CreateLogStream
+                  - logs:PutLogEvents
+                Resource: !Sub "${BackupCriticalEventsLogGroup.Arn}:*"
+
+  BackupCriticalEventsLambda:
+    Type: AWS::Lambda::Function
+    Properties:
+      FunctionName: !Sub "${ProjectName}-${Environment}"
+      Runtime: python3.12
+      Handler: app.lambda_handler
+      Role: !GetAtt BackupCriticalEventsLambdaRole.Arn
+      Timeout: 30
+      MemorySize: 128
+      Environment:
+        Variables:
+          HUB_ENDPOINT_URL: !Ref HubEndpointUrl
+          HUB_AUTH_TOKEN: !Ref HubAuthToken
+          ENVIRONMENT: !Ref Environment
+          PROJECT_NAME: !Ref ProjectName
+      Code:
+        ZipFile: |
+          import json
+          import os
+          import urllib.request
+          import urllib.error
+          from datetime import datetime, timezone
+
+          CRITICAL_STATES = {"FAILED", "ABORTED", "EXPIRED", "PARTIAL"}
+
+          def lambda_handler(event, context):
+              print("Received event:")
+              print(json.dumps(event))
+
+              detail = event.get("detail", {})
+              state = detail.get("state", "UNKNOWN")
+
+              if state not in CRITICAL_STATES:
+                  print(f"Ignored non-critical state: {state}")
+                  return {
+                      "statusCode": 200,
+                      "body": json.dumps({
+                          "message": "Event ignored",
+                          "state": state
+                      })
+                  }
+
+              message = {
+                  "source": "aws.backup",
+                  "event_type": "backup_job_critical_status",
+                  "severity": "critical",
+                  "environment": os.environ.get("ENVIRONMENT", "unknown"),
+                  "project": os.environ.get("PROJECT_NAME", "unknown"),
+                  "timestamp": datetime.now(timezone.utc).isoformat(),
+                  "aws_region": event.get("region"),
+                  "aws_account": event.get("account"),
+                  "backup_job_id": detail.get("backupJobId"),
+                  "backup_vault_name": detail.get("backupVaultName"),
+                  "resource_arn": detail.get("resourceArn"),
+                  "resource_type": detail.get("resourceType"),
+                  "state": state,
+                  "status_message": detail.get("statusMessage"),
+                  "raw_event_id": event.get("id")
+              }
+
+              send_to_hub(message)
+
+              return {
+                  "statusCode": 200,
+                  "body": json.dumps({
+                      "message": "Critical backup event forwarded to hub",
+                      "state": state
+                  })
+              }
+
+          def send_to_hub(message):
+              hub_url = os.environ["HUB_ENDPOINT_URL"]
+              token = os.environ["HUB_AUTH_TOKEN"]
+
+              data = json.dumps(message).encode("utf-8")
+
+              request = urllib.request.Request(
+                  hub_url,
+                  data=data,
+                  headers={
+                      "Content-Type": "application/json",
+                      "Authorization": f"Bearer {token}"
+                  },
+                  method="POST"
+              )
+
+              try:
+                  with urllib.request.urlopen(request, timeout=10) as response:
+                      response_body = response.read().decode("utf-8")
+                      print(f"Hub response status: {response.status}")
+                      print(f"Hub response body: {response_body}")
+              except urllib.error.HTTPError as error:
+                  print(f"HTTP error sending event to hub: {error.code}")
+                  print(error.read().decode("utf-8"))
+                  raise
+              except urllib.error.URLError as error:
+                  print(f"URL error sending event to hub: {error.reason}")
+                  raise
+
+  BackupCriticalEventsRule:
+    Type: AWS::Events::Rule
+    Properties:
+      Name: !Sub "${ProjectName}-${Environment}-eventbridge-rule"
+      Description: Captures critical AWS Backup job state changes.
+      State: ENABLED
+      EventPattern:
+        source:
+          - aws.backup
+        detail-type:
+          - Backup Job State Change
+        detail:
+          state:
+            - FAILED
+            - ABORTED
+            - EXPIRED
+            - PARTIAL
+      Targets:
+        - Arn: !GetAtt BackupCriticalEventsLambda.Arn
+          Id: BackupCriticalEventsLambdaTarget
+
+  AllowEventBridgeInvokeLambda:
+    Type: AWS::Lambda::Permission
+    Properties:
+      FunctionName: !Ref BackupCriticalEventsLambda
+      Action: lambda:InvokeFunction
+      Principal: events.amazonaws.com
+      SourceArn: !GetAtt BackupCriticalEventsRule.Arn
+
+Outputs:
+  LambdaFunctionName:
+    Description: Lambda function name.
+    Value: !Ref BackupCriticalEventsLambda
+
+  EventBridgeRuleName:
+    Description: EventBridge rule name.
+    Value: !Ref BackupCriticalEventsRule
+
+  LogGroupName:
+    Description: CloudWatch Logs group name.
+    Value: !Ref BackupCriticalEventsLogGroup
