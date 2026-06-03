@@ -1,0 +1,21 @@
+{
+  "source": "aws.backup",
+  "event_type": "backup_job_critical_status",
+  "severity": "critical",
+  "environment": "demo",
+  "project": "aws-backup-critical-events-to-hub",
+  "timestamp": "2026-01-01T12:00:00Z",
+  "aws_region": "eu-central-1",
+  "aws_account": "123456789012",
+  "raw_event_id": "example-event-id-failed",
+  "backup": {
+    "backup_job_id": "example-backup-job-id-failed",
+    "backup_vault_name": "example-backup-vault",
+    "resource_arn": "arn:aws:ec2:eu-central-1:123456789012:volume/vol-example",
+    "resource_type": "EBS",
+    "state": "FAILED",
+    "status_message": "Example failure message.",
+    "creation_date": "2026-01-01T11:00:00Z",
+    "completion_date": "2026-01-01T12:00:00Z"
+  }
+}
