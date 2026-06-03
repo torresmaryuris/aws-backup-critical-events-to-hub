@@ -1,0 +1,22 @@
+[
+  {
+    "ParameterKey": "ProjectName",
+    "ParameterValue": "aws-backup-critical-events-to-hub"
+  },
+  {
+    "ParameterKey": "Environment",
+    "ParameterValue": "demo"
+  },
+  {
+    "ParameterKey": "HubEndpointUrl",
+    "ParameterValue": "https://example-hub.company.com/events"
+  },
+  {
+    "ParameterKey": "HubAuthToken",
+    "ParameterValue": "example-token"
+  },
+  {
+    "ParameterKey": "LogRetentionInDays",
+    "ParameterValue": "30"
+  }
+]
